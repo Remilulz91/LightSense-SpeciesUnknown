@@ -1,0 +1,5 @@
+# Logs (mod and diagnostic)
+*.log
+
+# Release archives (built by GitHub Actions, not versioned)
+release/
