@@ -8,6 +8,9 @@ runs away from it.
 > [AlliedDefense-SpeciesUnknown](https://github.com/Remilulz91/AlliedDefense-SpeciesUnknown).
 > Author: **Remilulz_91** — © 2026 Remilulz_91, all rights reserved.
 > Idea: a friend's suggestion.
+>
+> **Download:** [Nexus Mods](https://www.nexusmods.com/speciesunknown/mods/21) ·
+> [GitHub Releases](https://github.com/Remilulz91/LightSense-SpeciesUnknown/releases)
 
 ## Requirements
 
@@ -22,7 +25,8 @@ runs away from it.
 
 ### From a release (players)
 
-1. Download `LightSense-vX.Y.Z.zip` from the
+1. Download `LightSense-vX.Y.Z.zip` from
+   [Nexus Mods](https://www.nexusmods.com/speciesunknown/mods/21) or the
    [Releases page](https://github.com/Remilulz91/LightSense-SpeciesUnknown/releases).
 2. Extract it into the UE4SS `Mods` folder, e.g.
    `...\Species Unknown\SpeciesUnknown\Binaries\Win64\ue4ss\Mods\`
