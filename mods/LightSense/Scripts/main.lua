@@ -1,4 +1,4 @@
--- LightSense v1.0.0 - Species: Unknown (UE4SS Lua)
+-- LightSense v1.0.1 - Species: Unknown (UE4SS Lua)
 -- Author: Remilulz_91
 --
 -- Monsters react to the players' flashlights.
@@ -23,7 +23,7 @@
 -- Lessons from AlliedDefense: UObjects are never kept across ticks, loop >= 500 ms,
 -- no hooks at all (only reads + a few calls on the game thread).
 
-local VERSION = "1.0.0"
+local VERSION = "1.0.1"
 local MOD = "LightSense"
 
 ---------------------------------------------------------------------------
@@ -59,6 +59,7 @@ default("closeRange", 500)
 default("closeConeAngle", 80)
 default("closeIgnoreWalls", true)
 default("nearDebugRange", 500)
+default("overrideRetries", 1)
 if cfg.tickMs < 500 then cfg.tickMs = 500 end
 
 ---------------------------------------------------------------------------
@@ -159,7 +160,8 @@ local state = {
     missed = {},     -- monster path -> seconds since it was last seen in a beam (grace)
     blockLogged = {},-- monster path -> time of the last BLOCKED line (one every 5 s at most)
     nearState = {},  -- monster path -> last NEAR debug status
-    pending = {},    -- monster path -> { id, label, ticks } behaviour switch to verify
+    pending = {},    -- monster path -> { id, label, ticks, player, retries } behaviour switch to verify
+    noBeamWarn = {}, -- player name -> time of the last 'no SpotLight' warning
     names = {},      -- monster path -> short name (logs)
     lastReact = {},  -- monster path -> tick of the last reaction
     stats = { lit = 0, reactions = 0, noise = 0, report = 0, spot = 0, flee = 0, attack = 0, losBlocked = 0 },
@@ -194,7 +196,14 @@ local function litBeams()
                     }
                 end
             else
-                logOnce("nobeam", "WARNING: player %s has no '%s' component (game update?)", shortName(p), cfg.flashlightComponent)
+                -- v1.0.1: per player, at most once a minute (seen once in a 5 h multiplayer game:
+                -- probably a character spawning / dying / joining)
+                local pn = shortName(p)
+                local last = state.noBeamWarn[pn]
+                if not last or now() - last >= 60 then
+                    state.noBeamWarn[pn] = now()
+                    log("WARNING: player %s has its lamp on but no '%s' component (spawning, dying or game update?)", pn, cfg.flashlightComponent)
+                end
             end
         end
     end
@@ -280,7 +289,8 @@ local function react(m, cn, b, d, key)
         if fn then
             if fn(m, b, d) and a ~= "ignore" then
                 if key and (a == "flee" or a == "attack") then
-                    state.pending[key] = { id = (a == "flee") and cfg.behaviorIds.escape or cfg.behaviorIds.combat, label = a, ticks = 2 }
+                    state.pending[key] = { id = (a == "flee") and cfg.behaviorIds.escape or cfg.behaviorIds.combat, label = a, ticks = 2,
+                                           player = fullPath(b.pawn), retries = cfg.overrideRetries }
                 end
                 done[#done + 1] = a
                 state.stats[a] = (state.stats[a] or 0) + 1
@@ -379,7 +389,14 @@ local function tick()
                                 local bt = readProp(m, "BehaviorType")
                                 if bt ~= pend.id then
                                     state.stats.overridden = (state.stats.overridden or 0) + 1
-                                    log("OVERRIDDEN %s: '%s' asked, behaviour is %s 1 s later", shortName(m), pend.label, tostring(bt))
+                                    -- v1.0.1: ask again once instead of waiting for the cooldown
+                                    local pl = (pend.retries or 0) > 0 and safe(function() return StaticFindObject(pend.player) end)
+                                    if pl and valid(pl) and ACTIONS[pend.label](m, { pawn = pl }) then
+                                        log("OVERRIDDEN %s: '%s' asked, behaviour is %s 1 s later - asked again", shortName(m), pend.label, tostring(bt))
+                                        state.pending[key] = { id = pend.id, label = pend.label, ticks = 2, player = pend.player, retries = pend.retries - 1 }
+                                    else
+                                        log("OVERRIDDEN %s: '%s' asked, behaviour is %s 1 s later", shortName(m), pend.label, tostring(bt))
+                                    end
                                 elseif state.verbose then
                                     log("KEPT   %s: '%s' still active 1 s later", shortName(m), pend.label)
                                 end

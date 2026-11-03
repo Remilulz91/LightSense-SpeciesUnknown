@@ -36,6 +36,7 @@ return {
                                 --   LineOfSightTo often failed between 3 and 5 m while the Poulpi attacked):
     closeConeAngle  = 80,       --   wider cone (its centre is far off the beam axis when it is on you)
     closeIgnoreWalls = true,    --   and no wall test (LineOfSightTo fails when it touches the player)
+    overrideRetries = 1,        -- if the game overrides a forced flee / attack 1 s later, ask again this many times
     nearDebugRange  = 500,      -- verbose: "NEAR" lines explain why a monster this close is (not) lit
     rangeScale      = 1.0,      -- x the beam range (2200 cm in the game)
 

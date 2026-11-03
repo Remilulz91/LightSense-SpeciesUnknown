@@ -19,7 +19,8 @@ runs away from it.
   plus the UE5.7 signature file from Nexus ("UE4SS Signatures for Species Unknown").
 - Mods are loaded through their `enabled.txt` file — no need to edit `mods.txt`.
 - Installing any mod locks public lobbies (game rule since 0.25): solo / private games only.
-- Multiplayer: monsters are driven by the **host**, so the host needs the mod.
+- Multiplayer: monsters are driven by the **host**, so **only the host needs the mod**
+  (tested: friends without any mod joined a private game, their flashlights trigger the reactions too).
 
 ## Install
 
@@ -82,7 +83,7 @@ Available actions in `mods\LightSense\Scripts\config.lua` (`reactions`, per mons
 
 Other settings: `litSeconds` (1 s in the beam before reacting), `cooldownSeconds` (8 s between
 two reactions of the same monster), `litGraceSeconds`, `lineOfSight`, `coneScale`, `rangeScale`,
-`closeRange` / `closeConeAngle` / `closeIgnoreWalls` (melee range), `noiseExtraRange`...
+`closeRange` / `closeConeAngle` / `closeIgnoreWalls` (melee range), `overrideRetries`, `noiseExtraRange`...
 
 ## How it works
 
@@ -124,6 +125,9 @@ LightSense-SpeciesUnknown/
 
 ## Changelog
 
+- **1.0.1** — multiplayer confirmed (5 h private game, host-only install, no crash). A forced
+  `flee` / `attack` overridden by the game 1 s later is asked again once (`overrideRetries`).
+  The "no SpotLight" warning now names the player and repeats at most once a minute.
 - **1.0.0** — first stable release. Zombies and BigRobot are attracted by the light (fake noise,
   + target report for the BigRobot), the Poulpi always flees it (game's own escape behaviour).
   Melee-range detection (5 m: wider cone, no wall test). Tested in solo on zombie, BigRobot and
@@ -136,11 +140,11 @@ LightSense-SpeciesUnknown/
 
 ## Known limitations
 
-- **Multiplayer untested**: in theory only the host needs the mod (the game sends every
-  player's lamp state to the host).
 - Michel, Eye and Ghost use the default reaction (attracted) and were not tested yet.
 - Within 5 m, a monster behind a thin wall can be counted as lit (no wall test in melee range).
 - Once its escape is over, the Poulpi draws its behaviour again: without the lamp it may still attack.
+  Rarely (once in a 5 h game) the game puts it back in combat right after a forced escape;
+  since 1.0.1 the escape is asked again once.
 - Every game update may rename classes/functions: if nothing reacts, turn verbose logs on (Alt+F11)
   and look for `not available` / `WARNING` lines.
 
