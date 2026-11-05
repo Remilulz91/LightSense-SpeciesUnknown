@@ -1,4 +1,4 @@
--- LightSense v1.0.1 - Species: Unknown (UE4SS Lua)
+-- LightSense v1.0.2 - Species: Unknown (UE4SS Lua)
 -- Author: Remilulz_91
 --
 -- Monsters react to the players' flashlights.
@@ -23,7 +23,7 @@
 -- Lessons from AlliedDefense: UObjects are never kept across ticks, loop >= 500 ms,
 -- no hooks at all (only reads + a few calls on the game thread).
 
-local VERSION = "1.0.1"
+local VERSION = "1.0.2"
 local MOD = "LightSense"
 
 ---------------------------------------------------------------------------
@@ -60,6 +60,9 @@ default("closeConeAngle", 80)
 default("closeIgnoreWalls", true)
 default("nearDebugRange", 500)
 default("overrideRetries", 1)
+default("remoteLampFromBeam", true)
+default("remoteMinIntensity", 1)
+default("lampIntensityProp", "FlashLightIntensity")
 if cfg.tickMs < 500 then cfg.tickMs = 500 end
 
 ---------------------------------------------------------------------------
@@ -162,6 +165,7 @@ local state = {
     nearState = {},  -- monster path -> last NEAR debug status
     pending = {},    -- monster path -> { id, label, ticks, player, retries } behaviour switch to verify
     noBeamWarn = {}, -- player name -> time of the last 'no SpotLight' warning
+    lampState = {},  -- player name -> last detected lamp state (LAMP log lines)
     names = {},      -- monster path -> short name (logs)
     lastReact = {},  -- monster path -> tick of the last reaction
     stats = { lit = 0, reactions = 0, noise = 0, report = 0, spot = 0, flee = 0, attack = 0, losBlocked = 0 },
@@ -174,10 +178,57 @@ local function now() return state.tick * cfg.tickMs / 1000 end
 ---------------------------------------------------------------------------
 -- Players and their beams
 ---------------------------------------------------------------------------
+-- Is this player's lamp on? -> on, source
+-- v1.0.2: in multiplayer the host never saw its friends' lamps (5 h game, every reaction
+-- came from the host). FlashLightOn seems to change only on the owning client; what the
+-- game sends to the host is the lamp intensity (OnRep_FlashLightIntensity), which drives
+-- the beam everybody sees. For remote players the visible beam is used as well.
+local function lampState(p)
+    if readProp(p, cfg.flashlightOnProp) == true then return true, cfg.flashlightOnProp end
+    if not cfg.remoteLampFromBeam then return false, "off" end
+    if safe(function() return p:IsLocallyControlled() end) ~= false then return false, "off" end
+    local c = readProp(p, cfg.flashlightComponent)
+    if not valid(c) then return false, "no beam" end
+    local inten = readProp(c, "Intensity")
+    local vis = safe(function() return c:IsVisible() end)
+    if type(inten) == "number" and inten >= cfg.remoteMinIntensity and vis ~= false then
+        return true, "beam"
+    end
+    return false, "off"
+end
+
+local function fmtN(v)
+    if type(v) == "number" then return string.format("%.1f", v) end
+    return tostring(v)
+end
+
+local function playersLine()
+    local parts = {}
+    for _, p in ipairs(findAll(cfg.playerBaseClass)) do
+        local c = readProp(p, cfg.flashlightComponent)
+        parts[#parts + 1] = string.format("%s[local=%s %s=%s %s=%s beam=%s/%s]", shortName(p),
+            tostring(safe(function() return p:IsLocallyControlled() end)),
+            cfg.flashlightOnProp, tostring(readProp(p, cfg.flashlightOnProp)),
+            cfg.lampIntensityProp, fmtN(readProp(p, cfg.lampIntensityProp)),
+            valid(c) and fmtN(readProp(c, "Intensity")) or "none",
+            valid(c) and tostring(safe(function() return c:IsVisible() end)) or "-")
+    end
+    return #parts > 0 and table.concat(parts, "  ") or "-"
+end
+
 local function litBeams()
     local beams = {}
     for _, p in ipairs(findAll(cfg.playerBaseClass)) do
-        if readProp(p, cfg.flashlightOnProp) == true then
+        local on, source = lampState(p)
+        if state.verbose then
+            local pn = shortName(p)
+            if state.lampState[pn] ~= on then
+                state.lampState[pn] = on
+                log("LAMP   %s %s (%s, %s)", pn, on and "ON" or "OFF", source,
+                    safe(function() return p:IsLocallyControlled() end) == false and "remote player" or "local player")
+            end
+        end
+        if on then
             local c = readProp(p, cfg.flashlightComponent)
             if valid(c) then
                 local lx, ly, lz = compLoc(c)
@@ -302,8 +353,9 @@ local function react(m, cn, b, d, key)
     if #done > 0 then
         state.stats.reactions = state.stats.reactions + 1
         if state.verbose then
-            log("REACT  %s -> %s  (lit by %s, %.0f cm, behaviour now %s)", shortName(m), table.concat(done, "+"), b.name, d,
-                tostring(readProp(m, "BehaviorType")))
+            local bt = readProp(m, "BehaviorType")
+            log("REACT  %s -> %s  (lit by %s, %.0f cm%s)", shortName(m), table.concat(done, "+"), b.name, d,
+                type(bt) == "number" and (", behaviour now " .. bt) or "")
         end
     end
 end
@@ -425,6 +477,7 @@ local function tick()
         local s = state.stats
         log("STATS  lit=%d reactions=%d (noise=%d report=%d spot=%d flee=%d attack=%d) overridden=%d wallBlocked=%d",
             s.lit, s.reactions, s.noise or 0, s.report or 0, s.spot or 0, s.flee or 0, s.attack or 0, s.overridden or 0, s.losBlocked)
+        log("PLAYERS %s", playersLine())
     end
 end
 

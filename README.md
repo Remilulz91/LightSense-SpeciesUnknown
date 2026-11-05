@@ -20,7 +20,8 @@ runs away from it.
 - Mods are loaded through their `enabled.txt` file — no need to edit `mods.txt`.
 - Installing any mod locks public lobbies (game rule since 0.25): solo / private games only.
 - Multiplayer: monsters are driven by the **host**, so **only the host needs the mod**
-  (tested: friends without any mod joined a private game, their flashlights trigger the reactions too).
+  (friends without any mod can join a private game). Friends' flashlights are detected through
+  their visible beam since 1.0.2 (to be confirmed in game).
 
 ## Install
 
@@ -83,7 +84,8 @@ Available actions in `mods\LightSense\Scripts\config.lua` (`reactions`, per mons
 
 Other settings: `litSeconds` (1 s in the beam before reacting), `cooldownSeconds` (8 s between
 two reactions of the same monster), `litGraceSeconds`, `lineOfSight`, `coneScale`, `rangeScale`,
-`closeRange` / `closeConeAngle` / `closeIgnoreWalls` (melee range), `overrideRetries`, `noiseExtraRange`...
+`closeRange` / `closeConeAngle` / `closeIgnoreWalls` (melee range), `overrideRetries`,
+`remoteLampFromBeam` / `remoteMinIntensity` (friends' lamps), `noiseExtraRange`...
 
 ## How it works
 
@@ -125,7 +127,13 @@ LightSense-SpeciesUnknown/
 
 ## Changelog
 
-- **1.0.1** — multiplayer confirmed (5 h private game, host-only install, no crash). A forced
+- **1.0.2** — friends' flashlights: a 2 h 45 verbose multiplayer log showed that every reaction
+  came from the host's lamp (`FlashLightOn` seems to change only on the owning client). Remote
+  players now also count as "lamp on" when their beam is visible (`remoteLampFromBeam`).
+  Verbose logs: `LAMP` lines when a lamp turns on/off (with its source) and a `PLAYERS` line
+  every 30 s. `REACT` lines no longer print `TrivialObject` for monsters without behaviour number.
+  First verbose data on SnowSpider, SmallLeech, DarkLeech, Eye, Ghost and Michel (default reaction, no error).
+- **1.0.1** — multiplayer stable (5 h private game, host-only install, no crash). A forced
   `flee` / `attack` overridden by the game 1 s later is asked again once (`overrideRetries`).
   The "no SpotLight" warning now names the player and repeats at most once a minute.
 - **1.0.0** — first stable release. Zombies and BigRobot are attracted by the light (fake noise,
@@ -140,7 +148,7 @@ LightSense-SpeciesUnknown/
 
 ## Known limitations
 
-- Michel, Eye and Ghost use the default reaction (attracted) and were not tested yet.
+- Michel, Eye, Ghost, SnowSpider and the leeches use the default reaction (attracted).
 - Within 5 m, a monster behind a thin wall can be counted as lit (no wall test in melee range).
 - Once its escape is over, the Poulpi draws its behaviour again: without the lamp it may still attack.
   Rarely (once in a 5 h game) the game puts it back in combat right after a forced escape;

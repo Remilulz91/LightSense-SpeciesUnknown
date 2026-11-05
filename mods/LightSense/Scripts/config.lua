@@ -50,6 +50,11 @@ return {
     monsterBaseClass    = "BP_ParentMonster_C",
     flashlightOnProp    = "FlashLightOn",
     flashlightComponent = "SpotLight",
+    lampIntensityProp   = "FlashLightIntensity", -- logged in PLAYERS lines (verbose)
+    -- v1.0.2: remote players (friends) also count as "lamp on" when their beam is visible with an
+    -- intensity >= remoteMinIntensity (FlashLightOn may only change on the friend's own PC)
+    remoteLampFromBeam  = true,
+    remoteMinIntensity  = 1,
     defaultConeAngle    = 45,
     defaultRange        = 2200,
 
