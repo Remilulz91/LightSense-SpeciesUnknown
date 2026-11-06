@@ -55,6 +55,9 @@ return {
     -- intensity >= remoteMinIntensity (FlashLightOn may only change on the friend's own PC)
     remoteLampFromBeam  = true,
     remoteMinIntensity  = 1,
+    -- v1.0.3: friends' beam direction = their aim as sent to the host (GetBaseAimRotation,
+    -- includes looking up/down) instead of the light component orientation
+    remoteAimFromView   = true,
     defaultConeAngle    = 45,
     defaultRange        = 2200,
 

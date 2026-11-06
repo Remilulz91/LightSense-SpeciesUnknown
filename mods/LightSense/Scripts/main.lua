@@ -1,4 +1,4 @@
--- LightSense v1.0.2 - Species: Unknown (UE4SS Lua)
+-- LightSense v1.0.3 - Species: Unknown (UE4SS Lua)
 -- Author: Remilulz_91
 --
 -- Monsters react to the players' flashlights.
@@ -23,7 +23,7 @@
 -- Lessons from AlliedDefense: UObjects are never kept across ticks, loop >= 500 ms,
 -- no hooks at all (only reads + a few calls on the game thread).
 
-local VERSION = "1.0.2"
+local VERSION = "1.0.3"
 local MOD = "LightSense"
 
 ---------------------------------------------------------------------------
@@ -61,6 +61,7 @@ default("closeIgnoreWalls", true)
 default("nearDebugRange", 500)
 default("overrideRetries", 1)
 default("remoteLampFromBeam", true)
+default("remoteAimFromView", true)
 default("remoteMinIntensity", 1)
 default("lampIntensityProp", "FlashLightIntensity")
 if cfg.tickMs < 500 then cfg.tickMs = 500 end
@@ -202,6 +203,25 @@ local function fmtN(v)
     return tostring(v)
 end
 
+-- Aim direction of a pawn (GetBaseAimRotation: for a remote player the host gets the
+-- replicated view pitch + the actor yaw) -> unit vector, or nil
+local function aimForward(p)
+    local r = safe(function() return p:GetBaseAimRotation() end)
+    if r == nil then return nil end
+    local pitch = safe(function() return r.Pitch end)
+    local yaw = safe(function() return r.Yaw end)
+    if type(pitch) ~= "number" or type(yaw) ~= "number" then return nil end
+    local pr, yr = math.rad(pitch), math.rad(yaw)
+    return math.cos(pr) * math.cos(yr), math.cos(pr) * math.sin(yr), math.sin(pr)
+end
+
+local function angleBetween(ax, ay, az, bx, by, bz)
+    local d = ax * bx + ay * by + az * bz
+    return math.deg(math.acos(math.max(-1, math.min(1, d))))
+end
+
+local function isRemote(p) return safe(function() return p:IsLocallyControlled() end) == false end
+
 local function playersLine()
     local parts = {}
     for _, p in ipairs(findAll(cfg.playerBaseClass)) do
@@ -212,6 +232,16 @@ local function playersLine()
             cfg.lampIntensityProp, fmtN(readProp(p, cfg.lampIntensityProp)),
             valid(c) and fmtN(readProp(c, "Intensity")) or "none",
             valid(c) and tostring(safe(function() return c:IsVisible() end)) or "-")
+        -- v1.0.3: compare the beam component direction with the aim direction
+        if valid(c) then
+            local fx, fy, fz = compFwd(c)
+            local ax, ay, az = aimForward(p)
+            if fx and ax then
+                parts[#parts] = parts[#parts]:sub(1, -2) .. string.format(" beamPitch=%.0f aimPitch=%.0f aimDiff=%.0f]",
+                    math.deg(math.asin(math.max(-1, math.min(1, fz)))), math.deg(math.asin(math.max(-1, math.min(1, az)))),
+                    angleBetween(fx, fy, fz, ax, ay, az))
+            end
+        end
     end
     return #parts > 0 and table.concat(parts, "  ") or "-"
 end
@@ -233,6 +263,12 @@ local function litBeams()
             if valid(c) then
                 local lx, ly, lz = compLoc(c)
                 local fx, fy, fz = compFwd(c)
+                -- v1.0.3: for friends, aim with the direction the game sends to the host
+                -- (the beam component may not follow their up/down aim on the host)
+                if cfg.remoteAimFromView and isRemote(p) then
+                    local ax, ay, az = aimForward(p)
+                    if ax then fx, fy, fz = ax, ay, az end
+                end
                 local outer = readProp(c, "OuterConeAngle")
                 local range = readProp(c, "AttenuationRadius")
                 if type(outer) ~= "number" then outer = cfg.defaultConeAngle end

@@ -21,7 +21,8 @@ runs away from it.
 - Installing any mod locks public lobbies (game rule since 0.25): solo / private games only.
 - Multiplayer: monsters are driven by the **host**, so **only the host needs the mod**
   (friends without any mod can join a private game). Friends' flashlights are detected through
-  their visible beam since 1.0.2 (to be confirmed in game).
+  their visible beam (since 1.0.2, confirmed in game) and aim with their view direction (1.0.3).
+  When a friend hosts, the mod must be installed on **their** PC.
 
 ## Install
 
@@ -85,7 +86,7 @@ Available actions in `mods\LightSense\Scripts\config.lua` (`reactions`, per mons
 Other settings: `litSeconds` (1 s in the beam before reacting), `cooldownSeconds` (8 s between
 two reactions of the same monster), `litGraceSeconds`, `lineOfSight`, `coneScale`, `rangeScale`,
 `closeRange` / `closeConeAngle` / `closeIgnoreWalls` (melee range), `overrideRetries`,
-`remoteLampFromBeam` / `remoteMinIntensity` (friends' lamps), `noiseExtraRange`...
+`remoteLampFromBeam` / `remoteMinIntensity` / `remoteAimFromView` (friends' lamps), `noiseExtraRange`...
 
 ## How it works
 
@@ -127,6 +128,11 @@ LightSense-SpeciesUnknown/
 
 ## Changelog
 
+- **1.0.3** — friends' lamps confirmed in game (1.0.2 log: 100 `LAMP ON` and 21 reactions from
+  remote players, 0 before). Friends' beams now use their aim direction as sent to the host
+  (`GetBaseAimRotation`, includes looking up/down) instead of the light component orientation,
+  which may not follow their vertical aim on the host (`remoteAimFromView`). `PLAYERS` lines show
+  `beamPitch` / `aimPitch` / `aimDiff` to compare both.
 - **1.0.2** — friends' flashlights: a 2 h 45 verbose multiplayer log showed that every reaction
   came from the host's lamp (`FlashLightOn` seems to change only on the owning client). Remote
   players now also count as "lamp on" when their beam is visible (`remoteLampFromBeam`).
