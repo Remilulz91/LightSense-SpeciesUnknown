@@ -1,4 +1,4 @@
--- LightSense v1.0.3 - Species: Unknown (UE4SS Lua)
+-- LightSense v1.0.4 - Species: Unknown (UE4SS Lua)
 -- Author: Remilulz_91
 --
 -- Monsters react to the players' flashlights.
@@ -23,7 +23,7 @@
 -- Lessons from AlliedDefense: UObjects are never kept across ticks, loop >= 500 ms,
 -- no hooks at all (only reads + a few calls on the game thread).
 
-local VERSION = "1.0.3"
+local VERSION = "1.0.4"
 local MOD = "LightSense"
 
 ---------------------------------------------------------------------------
@@ -62,6 +62,7 @@ default("nearDebugRange", 500)
 default("overrideRetries", 1)
 default("remoteLampFromBeam", true)
 default("remoteAimFromView", true)
+default("ignoreBodies", true)
 default("remoteMinIntensity", 1)
 default("lampIntensityProp", "FlashLightIntensity")
 if cfg.tickMs < 500 then cfg.tickMs = 500 end
@@ -222,9 +223,24 @@ end
 
 local function isRemote(p) return safe(function() return p:IsLocallyControlled() end) == false end
 
+-- v1.0.4: a dead player's body stays in the level with FlashLightOn still true but no
+-- controller (1.0.3 log: the host died at 18:30, its body kept shining, then lost its
+-- SpotLight and logged a warning every minute for 9 minutes). Bodies are ignored.
+local function isBody(p)
+    return cfg.ignoreBodies and not valid(readProp(p, "Controller"))
+end
+
+local function players()
+    local out = {}
+    for _, p in ipairs(findAll(cfg.playerBaseClass)) do
+        if not isBody(p) then out[#out + 1] = p end
+    end
+    return out
+end
+
 local function playersLine()
     local parts = {}
-    for _, p in ipairs(findAll(cfg.playerBaseClass)) do
+    for _, p in ipairs(players()) do
         local c = readProp(p, cfg.flashlightComponent)
         parts[#parts + 1] = string.format("%s[local=%s %s=%s %s=%s beam=%s/%s]", shortName(p),
             tostring(safe(function() return p:IsLocallyControlled() end)),
@@ -248,7 +264,7 @@ end
 
 local function litBeams()
     local beams = {}
-    for _, p in ipairs(findAll(cfg.playerBaseClass)) do
+    for _, p in ipairs(players()) do
         local on, source = lampState(p)
         if state.verbose then
             local pn = shortName(p)

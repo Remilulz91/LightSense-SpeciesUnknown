@@ -58,6 +58,7 @@ return {
     -- v1.0.3: friends' beam direction = their aim as sent to the host (GetBaseAimRotation,
     -- includes looking up/down) instead of the light component orientation
     remoteAimFromView   = true,
+    ignoreBodies        = true,  -- v1.0.4: a dead player's body (no controller) is not a light source
     defaultConeAngle    = 45,
     defaultRange        = 2200,
 

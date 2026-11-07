@@ -86,7 +86,7 @@ Available actions in `mods\LightSense\Scripts\config.lua` (`reactions`, per mons
 Other settings: `litSeconds` (1 s in the beam before reacting), `cooldownSeconds` (8 s between
 two reactions of the same monster), `litGraceSeconds`, `lineOfSight`, `coneScale`, `rangeScale`,
 `closeRange` / `closeConeAngle` / `closeIgnoreWalls` (melee range), `overrideRetries`,
-`remoteLampFromBeam` / `remoteMinIntensity` / `remoteAimFromView` (friends' lamps), `noiseExtraRange`...
+`remoteLampFromBeam` / `remoteMinIntensity` / `remoteAimFromView` (friends' lamps), `ignoreBodies`, `noiseExtraRange`...
 
 ## How it works
 
@@ -128,6 +128,11 @@ LightSense-SpeciesUnknown/
 
 ## Changelog
 
+- **1.0.4** — dead players' bodies are ignored (`ignoreBodies`): a body kept `FlashLightOn` true
+  without a controller, kept shining, then logged a "no SpotLight" warning every minute.
+  1.0.3 multiplayer log (verbose in every game): 25 of 60 reactions came from friends' lamps; the
+  beam and aim directions match (average gap 2°), so `remoteAimFromView` changes nothing in
+  practice and is kept as a safety.
 - **1.0.3** — friends' lamps confirmed in game (1.0.2 log: 100 `LAMP ON` and 21 reactions from
   remote players, 0 before). Friends' beams now use their aim direction as sent to the host
   (`GetBaseAimRotation`, includes looking up/down) instead of the light component orientation,
